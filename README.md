@@ -40,8 +40,8 @@ world-happiness-analytics/
 
 ## 🚀 How to View the Dashboard
 
-1. Download or clone this repository
-2. Open `dashboard.html` in any browser — no server required
+1. Download or clone this repository (can also just dowload dashboard.html from the code section of this repository).
+2. Open `dashboard.html` in any browser, no server required
 3. Use the filters at the top to slice by **Year** (2019–2023) and **Region**
 
 > **Optional — run the Python analysis:**
@@ -54,7 +54,7 @@ world-happiness-analytics/
 
 ## 📊 Visualizations
 
-### 1. KPI Cards — Global Overview
+### 1. KPI Cards, Global Overview
 Five KPI cards update dynamically with filters: happiest country, global average, score range, countries above 7.0, and least happy country.
 
 ### 2. Country Rankings (Horizontal Bar Chart)
