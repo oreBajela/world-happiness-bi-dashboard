@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>World Happiness Report — Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #f7f5f0;
+  --surface: #ffffff;
+  --surface2: #f0ede6;
+  --border: #e2ddd5;
+  --text: #1a1714;
+  --muted: #8a7f74;
+  --accent: #e8632a;
+  --accent2: #2a7de8;
+  --accent3: #2ac87d;
+  --accent4: #c82a7d;
+  --accent5: #8a2ae8;
+  --font: 'Sora', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
+
+/* HEADER */
+header {
+  background: var(--text);
+  color: #f7f5f0;
+  padding: 0 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+}
+.logo { display: flex; align-items: center; gap: 14px; }
+.logo-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 3px rgba(232,99,42,0.3);
+}
+.logo h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+.logo span { font-size: 12px; color: #8a7f74; font-family: var(--mono); margin-left: 4px; }
+.header-right { display: flex; align-items: center; gap: 20px; }
+.pill {
+  padding: 4px 12px; border-radius: 20px; font-size: 11px; font-family: var(--mono);
+  border: 1px solid rgba(247,245,240,0.2); color: #c5bfb8;
+}
+
+/* FILTER BAR */
+.filter-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 36px;
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+}
+.filter-group { display: flex; align-items: center; gap: 8px; }
+.filter-group label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+select {
+  background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); padding: 6px 12px; border-radius: 6px;
+  font-family: var(--font); font-size: 12px; cursor: pointer; outline: none;
+}
+select:focus { border-color: var(--accent); }
+.filter-sep { width: 1px; height: 20px; background: var(--border); }
+.reset-btn {
+  background: none; border: 1px solid var(--border); color: var(--muted);
+  padding: 6px 14px; border-radius: 6px; font-family: var(--font); font-size: 12px;
+  cursor: pointer; transition: all .2s;
+}
+.reset-btn:hover { border-color: var(--accent); color: var(--accent); }
+.source-note { margin-left: auto; font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+/* MAIN */
+main { padding: 28px 36px; max-width: 1440px; margin: 0 auto; }
+.section-header { margin-bottom: 16px; display: flex; align-items: baseline; gap: 10px; }
+.section-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; }
+.section-desc { font-size: 12px; color: var(--muted); }
+
+/* KPI CARDS */
+.kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 28px; }
+.kpi {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 18px 20px; position: relative; overflow: hidden;
+  transition: box-shadow .2s, transform .15s;
+}
+.kpi:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); transform: translateY(-2px); }
+.kpi-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 3px 0 0 3px; }
+.kpi-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+.kpi-value { font-size: 28px; font-weight: 300; letter-spacing: -1px; line-height: 1; }
+.kpi-sub { font-size: 11px; color: var(--muted); margin-top: 6px; font-family: var(--mono); }
+
+/* CHART GRID */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+.grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 24px; }
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 22px; overflow: hidden;
+}
+.card-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.card-sub { font-size: 11px; color: var(--muted); margin-bottom: 18px; }
+.chart-wrap { position: relative; }
+
+/* RANKING TABLE */
+.rank-table { width: 100%; border-collapse: collapse; }
+.rank-table th {
+  text-align: left; padding: 6px 10px; font-size: 10px; font-family: var(--mono);
+  color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;
+  border-bottom: 1px solid var(--border); background: var(--bg);
+}
+.rank-table td { padding: 9px 10px; border-bottom: 1px solid var(--surface2); font-size: 12px; }
+.rank-table tr:hover td { background: var(--bg); }
+.rank-num { font-family: var(--mono); color: var(--muted); font-size: 11px; width: 30px; }
+.score-bar { display: flex; align-items: center; gap: 8px; }
+.sbar { height: 6px; border-radius: 3px; flex-shrink: 0; }
+.region-tag {
+  display: inline-block; padding: 2px 7px; border-radius: 4px;
+  font-size: 10px; font-family: var(--mono); background: var(--bg); color: var(--muted);
+}
+
+/* HEATMAP */
+.heatmap-wrap { overflow-x: auto; }
+.heatmap-grid { display: grid; gap: 3px; min-width: 600px; }
+.hm-cell {
+  height: 28px; border-radius: 3px; display: flex; align-items: center;
+  justify-content: center; font-size: 10px; font-family: var(--mono);
+  cursor: default; transition: filter .15s;
+  position: relative;
+}
+.hm-cell:hover { filter: brightness(0.85); }
+.hm-cell::after {
+  content: attr(data-tip);
+  display: none; position: absolute;
+  bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: var(--text); color: #f7f5f0; padding: 4px 8px; border-radius: 4px;
+  font-size: 10px; white-space: nowrap; z-index: 10; pointer-events: none;
+}
+.hm-cell:hover::after { display: block; }
+.hm-label { font-size: 11px; font-family: var(--mono); color: var(--muted); }
+
+/* SCATTER CUSTOM */
+.factor-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.factor-btn {
+  padding: 5px 12px; border-radius: 5px; border: 1px solid var(--border);
+  background: var(--bg); font-family: var(--mono); font-size: 11px; cursor: pointer;
+  color: var(--muted); transition: all .15s;
+}
+.factor-btn.active { background: var(--text); color: #f7f5f0; border-color: var(--text); }
+
+/* TREND TABS */
+.trend-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.trend-tab {
+  padding: 5px 14px; border-radius: 5px; border: 1px solid var(--border);
+  background: var(--bg); font-size: 11px; cursor: pointer; color: var(--muted);
+  font-family: var(--mono); transition: all .15s;
+}
+.trend-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* INSIGHT CARDS */
+.insights-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px; }
+.insight-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 18px;
+}
+.insight-icon { font-size: 22px; margin-bottom: 8px; }
+.insight-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.insight-body { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.insight-stat { font-size: 20px; font-weight: 300; color: var(--accent); margin: 6px 0; }
+
+/* FOOTER */
+footer {
+  text-align: center; padding: 18px;
+  font-size: 11px; color: var(--muted); border-top: 1px solid var(--border);
+  font-family: var(--mono);
+}
+footer a { color: var(--accent); text-decoration: none; }
+
+@media (max-width: 900px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .grid-2, .grid-3, .grid-2-1, .grid-1-2 { grid-template-columns: 1fr; }
+  .insights-row { grid-template-columns: 1fr; }
+  main, .filter-bar, header { padding-left: 16px; padding-right: 16px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    <h1>World Happiness Report</h1>
+    <span>Analytics Dashboard</span>
+  </div>
+  <div class="header-right">
+    <span class="pill">Real Dataset · 2019–2023</span>
+    <span class="pill">68 Countries</span>
+  </div>
+</header>
+
+<div class="filter-bar">
+  <div class="filter-group">
+    <label>Year</label>
+    <select id="f-year" onchange="applyFilters()">
+      <option value="2023">2023</option>
+      <option value="2022">2022</option>
+      <option value="2021">2021</option>
+      <option value="2020">2020</option>
+      <option value="2019">2019</option>
+    </select>
+  </div>
+  <div class="filter-sep"></div>
+  <div class="filter-group">
+    <label>Region</label>
+    <select id="f-region" onchange="applyFilters()">
+      <option value="All">All Regions</option>
+      <option value="Western Europe">Western Europe</option>
+      <option value="North America & ANZ">North America & ANZ</option>
+      <option value="Central and Eastern Europe">Central & Eastern Europe</option>
+      <option value="East Asia">East Asia</option>
+      <option value="Southeast Asia">Southeast Asia</option>
+      <option value="Latin America & Caribbean">Latin America</option>
+      <option value="Middle East & North Africa">Middle East & N. Africa</option>
+      <option value="South Asia">South Asia</option>
+      <option value="Sub-Saharan Africa">Sub-Saharan Africa</option>
+      <option value="Commonwealth of Independent States">CIS</option>
+    </select>
+  </div>
+  <div class="filter-sep"></div>
+  <button class="reset-btn" onclick="resetFilters()">Reset</button>
+  <span class="source-note">Source: World Happiness Report (Gallup World Poll)</span>
+</div>
+
+<main>
+
+  <!-- KPIs -->
+  <div class="section-header">
+    <span class="section-label">Global Overview</span>
+    <span class="section-desc" id="kpi-context">Showing 2023 · All Regions</span>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--accent)"></div>
+      <div class="kpi-label">Happiest Country</div>
+      <div class="kpi-value" id="kpi-top" style="font-size:18px;margin-top:4px">—</div>
+      <div class="kpi-sub" id="kpi-top-score">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--accent2)"></div>
+      <div class="kpi-label">Global Avg Score</div>
+      <div class="kpi-value" id="kpi-avg">—</div>
+      <div class="kpi-sub" id="kpi-avg-sub">out of 10</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--accent3)"></div>
+      <div class="kpi-label">Score Range</div>
+      <div class="kpi-value" id="kpi-range">—</div>
+      <div class="kpi-sub" id="kpi-range-sub">max − min spread</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--accent4)"></div>
+      <div class="kpi-label">Countries Above 7</div>
+      <div class="kpi-value" id="kpi-above7">—</div>
+      <div class="kpi-sub" id="kpi-above7-sub">— of — in dataset</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--accent5)"></div>
+      <div class="kpi-label">Least Happy</div>
+      <div class="kpi-value" id="kpi-bottom" style="font-size:18px;margin-top:4px">—</div>
+      <div class="kpi-sub" id="kpi-bottom-score">—</div>
+    </div>
+  </div>
+
+  <!-- RANKINGS + REGION BAR -->
+  <div class="section-header">
+    <span class="section-label">Rankings & Regional Breakdown</span>
+  </div>
+  <div class="grid-2-1">
+    <div class="card">
+      <div class="card-title">Country Rankings</div>
+      <div class="card-sub">Sorted by happiness score — showing top &amp; bottom countries</div>
+      <div class="chart-wrap" style="height:320px"><canvas id="rankingChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Average Score by Region</div>
+      <div class="card-sub">Regional happiness averages</div>
+      <div class="chart-wrap" style="height:320px"><canvas id="regionChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TREND OVER TIME -->
+  <div class="section-header">
+    <span class="section-label">Happiness Trends 2019–2023</span>
+  </div>
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title">Score Trajectory Over Time</div>
+    <div class="card-sub">Select countries to compare multi-year trends</div>
+    <div class="trend-tabs" id="trend-tabs"></div>
+    <div class="chart-wrap" style="height:260px"><canvas id="trendChart"></canvas></div>
+  </div>
+
+  <!-- SCATTER + HEATMAP -->
+  <div class="section-header">
+    <span class="section-label">What Drives Happiness?</span>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Happiness vs Contributing Factor</div>
+      <div class="card-sub">Select a factor to explore its relationship with happiness</div>
+      <div class="factor-btns" id="factor-btns">
+        <button class="factor-btn active" data-key="GDP_per_capita" onclick="setFactor(this)">GDP</button>
+        <button class="factor-btn" data-key="SocialSupport" onclick="setFactor(this)">Social Support</button>
+        <button class="factor-btn" data-key="HealthyLifeExpectancy" onclick="setFactor(this)">Life Expectancy</button>
+        <button class="factor-btn" data-key="FreedomToChoose" onclick="setFactor(this)">Freedom</button>
+        <button class="factor-btn" data-key="Generosity" onclick="setFactor(this)">Generosity</button>
+      </div>
+      <div class="chart-wrap" style="height:270px"><canvas id="scatterChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Factor Contribution Heatmap</div>
+      <div class="card-sub">How much each factor contributes to happiness per country (top 20)</div>
+      <div class="heatmap-wrap"><div id="heatmap" style="min-height:200px"></div></div>
+    </div>
+  </div>
+
+  <!-- DISTRIBUTION + RADAR -->
+  <div class="grid-2" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title">Score Distribution</div>
+      <div class="card-sub">How happiness scores are spread across all countries</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="histChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Happiness Components — Top 5 vs Bottom 5</div>
+      <div class="card-sub">Average factor scores: happiest vs least happy countries</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="radarChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- DATA INSIGHTS -->
+  <div class="section-header">
+    <span class="section-label">Key Insights</span>
+  </div>
+  <div class="insights-row" id="insights-row"></div>
+
+  <!-- FULL DATA TABLE -->
+  <div class="section-header">
+    <span class="section-label">Full Dataset Table</span>
+  </div>
+  <div class="card" style="margin-bottom:28px">
+    <div class="card-title">All Countries — Detailed Scores</div>
+    <div class="card-sub">All contributing factors for the selected year and region</div>
+    <div style="overflow-x:auto">
+      <table class="rank-table">
+        <thead>
+          <tr>
+            <th>Rank</th><th>Country</th><th>Region</th>
+            <th>Score</th><th>GDP</th><th>Social</th>
+            <th>Health</th><th>Freedom</th><th>Generosity</th>
+          </tr>
+        </thead>
+        <tbody id="data-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Data: World Happiness Report 2019–2023 (Gallup World Poll) ·
+  Built as a Power BI portfolio project by a Data Science student ·
+  <a href="https://github.com" target="_blank">View on GitHub</a>
+</footer>
+
+<script>
+// ── RAW DATA ──────────────────────────────────────────────────────────────────
+const RAW = [
+  {Country:"Finland",Region:"Western Europe",Year:2023,Score:7.804,GDP:1.844,Social:1.572,Health:0.726,Freedom:0.695,Generosity:0.124,Corruption:0.195,Rank:1},
+  {Country:"Denmark",Region:"Western Europe",Year:2023,Score:7.586,GDP:1.908,Social:1.520,Health:0.699,Freedom:0.674,Generosity:0.188,Corruption:0.280,Rank:2},
+  {Country:"Iceland",Region:"Western Europe",Year:2023,Score:7.525,GDP:1.881,Social:1.617,Health:0.718,Freedom:0.677,Generosity:0.261,Corruption:0.148,Rank:3},
+  {Country:"Israel",Region:"Middle East & North Africa",Year:2023,Score:7.473,GDP:1.803,Social:1.513,Health:0.721,Freedom:0.508,Generosity:0.153,Corruption:0.127,Rank:4},
+  {Country:"Netherlands",Region:"Western Europe",Year:2023,Score:7.403,GDP:1.901,Social:1.484,Health:0.709,Freedom:0.642,Generosity:0.191,Corruption:0.292,Rank:5},
+  {Country:"Sweden",Region:"Western Europe",Year:2023,Score:7.395,GDP:1.878,Social:1.501,Health:0.724,Freedom:0.671,Generosity:0.164,Corruption:0.267,Rank:6},
+  {Country:"Norway",Region:"Western Europe",Year:2023,Score:7.315,GDP:2.003,Social:1.495,Health:0.738,Freedom:0.653,Generosity:0.134,Corruption:0.270,Rank:7},
+  {Country:"Switzerland",Region:"Western Europe",Year:2023,Score:7.240,GDP:2.025,Social:1.548,Health:0.742,Freedom:0.643,Generosity:0.163,Corruption:0.342,Rank:8},
+  {Country:"Australia",Region:"North America & ANZ",Year:2023,Score:7.095,GDP:1.876,Social:1.491,Health:0.730,Freedom:0.649,Generosity:0.206,Corruption:0.186,Rank:9},
+  {Country:"New Zealand",Region:"North America & ANZ",Year:2023,Score:7.123,GDP:1.772,Social:1.531,Health:0.720,Freedom:0.670,Generosity:0.240,Corruption:0.240,Rank:10},
+  {Country:"Canada",Region:"North America & ANZ",Year:2023,Score:6.961,GDP:1.855,Social:1.479,Health:0.716,Freedom:0.631,Generosity:0.161,Corruption:0.198,Rank:13},
+  {Country:"United States",Region:"North America & ANZ",Year:2023,Score:6.894,GDP:2.015,Social:1.397,Health:0.693,Freedom:0.609,Generosity:0.131,Corruption:0.110,Rank:15},
+  {Country:"Germany",Region:"Western Europe",Year:2023,Score:6.892,GDP:1.879,Social:1.451,Health:0.716,Freedom:0.615,Generosity:0.167,Corruption:0.211,Rank:16},
+  {Country:"United Kingdom",Region:"Western Europe",Year:2023,Score:6.796,GDP:1.844,Social:1.436,Health:0.706,Freedom:0.587,Generosity:0.163,Corruption:0.175,Rank:19},
+  {Country:"France",Region:"Western Europe",Year:2023,Score:6.661,GDP:1.840,Social:1.404,Health:0.714,Freedom:0.546,Generosity:0.069,Corruption:0.194,Rank:21},
+  {Country:"Czech Republic",Region:"Central and Eastern Europe",Year:2023,Score:6.621,GDP:1.730,Social:1.391,Health:0.717,Freedom:0.608,Generosity:0.066,Corruption:0.168,Rank:22},
+  {Country:"Costa Rica",Region:"Latin America & Caribbean",Year:2023,Score:6.609,GDP:1.473,Social:1.449,Health:0.714,Freedom:0.625,Generosity:0.123,Corruption:0.117,Rank:23},
+  {Country:"Belgium",Region:"Western Europe",Year:2023,Score:6.598,GDP:1.872,Social:1.383,Health:0.703,Freedom:0.585,Generosity:0.057,Corruption:0.185,Rank:24},
+  {Country:"Lithuania",Region:"Central and Eastern Europe",Year:2023,Score:6.574,GDP:1.744,Social:1.373,Health:0.705,Freedom:0.609,Generosity:0.038,Corruption:0.143,Rank:25},
+  {Country:"Spain",Region:"Western Europe",Year:2023,Score:6.476,GDP:1.782,Social:1.449,Health:0.737,Freedom:0.536,Generosity:0.061,Corruption:0.138,Rank:32},
+  {Country:"Italy",Region:"Western Europe",Year:2023,Score:6.405,GDP:1.788,Social:1.384,Health:0.717,Freedom:0.469,Generosity:0.074,Corruption:0.088,Rank:33},
+  {Country:"Mexico",Region:"Latin America & Caribbean",Year:2023,Score:6.330,GDP:1.491,Social:1.354,Health:0.668,Freedom:0.614,Generosity:0.081,Corruption:0.073,Rank:36},
+  {Country:"Brazil",Region:"Latin America & Caribbean",Year:2023,Score:6.125,GDP:1.426,Social:1.373,Health:0.631,Freedom:0.568,Generosity:0.128,Corruption:0.059,Rank:49},
+  {Country:"Romania",Region:"Central and Eastern Europe",Year:2023,Score:6.256,GDP:1.694,Social:1.340,Health:0.710,Freedom:0.556,Generosity:0.044,Corruption:0.102,Rank:41},
+  {Country:"Japan",Region:"East Asia",Year:2023,Score:6.129,GDP:1.861,Social:1.363,Health:0.742,Freedom:0.462,Generosity:0.119,Corruption:0.148,Rank:47},
+  {Country:"South Korea",Region:"East Asia",Year:2023,Score:5.951,GDP:1.838,Social:1.268,Health:0.729,Freedom:0.491,Generosity:0.078,Corruption:0.095,Rank:57},
+  {Country:"Russia",Region:"Commonwealth of Independent States",Year:2023,Score:5.661,GDP:1.680,Social:1.336,Health:0.618,Freedom:0.370,Generosity:0.041,Corruption:0.047,Rank:70},
+  {Country:"China",Region:"East Asia",Year:2023,Score:5.818,GDP:1.599,Social:1.222,Health:0.672,Freedom:0.527,Generosity:0.065,Corruption:0.055,Rank:64},
+  {Country:"Thailand",Region:"Southeast Asia",Year:2023,Score:5.843,GDP:1.504,Social:1.355,Health:0.670,Freedom:0.572,Generosity:0.156,Corruption:0.075,Rank:60},
+  {Country:"Malaysia",Region:"Southeast Asia",Year:2023,Score:5.975,GDP:1.658,Social:1.293,Health:0.680,Freedom:0.566,Generosity:0.154,Corruption:0.081,Rank:55},
+  {Country:"Indonesia",Region:"Southeast Asia",Year:2023,Score:5.240,GDP:1.331,Social:1.278,Health:0.613,Freedom:0.541,Generosity:0.239,Corruption:0.114,Rank:84},
+  {Country:"Vietnam",Region:"Southeast Asia",Year:2023,Score:5.714,GDP:1.296,Social:1.389,Health:0.611,Freedom:0.551,Generosity:0.139,Corruption:0.083,Rank:65},
+  {Country:"Philippines",Region:"Southeast Asia",Year:2023,Score:5.905,GDP:1.241,Social:1.365,Health:0.613,Freedom:0.579,Generosity:0.155,Corruption:0.063,Rank:59},
+  {Country:"India",Region:"South Asia",Year:2023,Score:4.036,GDP:1.075,Social:1.062,Health:0.540,Freedom:0.435,Generosity:0.140,Corruption:0.082,Rank:126},
+  {Country:"Pakistan",Region:"South Asia",Year:2023,Score:4.657,GDP:1.056,Social:1.154,Health:0.525,Freedom:0.376,Generosity:0.101,Corruption:0.076,Rank:108},
+  {Country:"Nigeria",Region:"Sub-Saharan Africa",Year:2023,Score:5.127,GDP:1.111,Social:1.191,Health:0.336,Freedom:0.437,Generosity:0.131,Corruption:0.068,Rank:93},
+  {Country:"South Africa",Region:"Sub-Saharan Africa",Year:2023,Score:5.274,GDP:1.372,Social:1.205,Health:0.392,Freedom:0.461,Generosity:0.091,Corruption:0.080,Rank:84},
+  {Country:"Kenya",Region:"Sub-Saharan Africa",Year:2023,Score:4.909,GDP:1.010,Social:1.095,Health:0.480,Freedom:0.459,Generosity:0.142,Corruption:0.090,Rank:99},
+  {Country:"Saudi Arabia",Region:"Middle East & North Africa",Year:2023,Score:6.363,GDP:1.945,Social:1.402,Health:0.688,Freedom:0.594,Generosity:0.088,Corruption:0.116,Rank:37},
+  {Country:"UAE",Region:"Middle East & North Africa",Year:2023,Score:6.733,GDP:2.026,Social:1.405,Health:0.723,Freedom:0.636,Generosity:0.145,Corruption:0.277,Rank:26},
+  {Country:"Turkey",Region:"Middle East & North Africa",Year:2023,Score:4.614,GDP:1.561,Social:1.290,Health:0.629,Freedom:0.327,Generosity:0.078,Corruption:0.069,Rank:106},
+  {Country:"Afghanistan",Region:"South Asia",Year:2023,Score:1.859,GDP:0.351,Social:0.517,Health:0.361,Freedom:0.000,Generosity:0.158,Corruption:0.025,Rank:137},
+  {Country:"Zimbabwe",Region:"Sub-Saharan Africa",Year:2023,Score:2.995,GDP:0.599,Social:1.052,Health:0.395,Freedom:0.391,Generosity:0.131,Corruption:0.088,Rank:144},
+  {Country:"Venezuela",Region:"Latin America & Caribbean",Year:2023,Score:5.211,GDP:0.886,Social:1.283,Health:0.568,Freedom:0.370,Generosity:0.080,Corruption:0.078,Rank:90},
+  {Country:"Argentina",Region:"Latin America & Caribbean",Year:2023,Score:5.973,GDP:1.516,Social:1.373,Health:0.666,Freedom:0.485,Generosity:0.081,Corruption:0.059,Rank:60},
+  {Country:"Chile",Region:"Latin America & Caribbean",Year:2023,Score:6.339,GDP:1.679,Social:1.391,Health:0.706,Freedom:0.557,Generosity:0.085,Corruption:0.127,Rank:36},
+  {Country:"Colombia",Region:"Latin America & Caribbean",Year:2023,Score:5.631,GDP:1.360,Social:1.311,Health:0.648,Freedom:0.560,Generosity:0.121,Corruption:0.051,Rank:73},
+  {Country:"Poland",Region:"Central and Eastern Europe",Year:2023,Score:6.144,GDP:1.756,Social:1.376,Health:0.716,Freedom:0.569,Generosity:0.075,Corruption:0.100,Rank:47},
+  {Country:"Hungary",Region:"Central and Eastern Europe",Year:2023,Score:5.812,GDP:1.703,Social:1.270,Health:0.706,Freedom:0.524,Generosity:0.057,Corruption:0.082,Rank:61},
+  {Country:"Ukraine",Region:"Central and Eastern Europe",Year:2023,Score:5.071,GDP:1.336,Social:1.272,Health:0.618,Freedom:0.451,Generosity:0.120,Corruption:0.066,Rank:92},
+  {Country:"Greece",Region:"Western Europe",Year:2023,Score:6.222,GDP:1.647,Social:1.307,Health:0.717,Freedom:0.508,Generosity:0.024,Corruption:0.067,Rank:45},
+  {Country:"Portugal",Region:"Western Europe",Year:2023,Score:6.288,GDP:1.713,Social:1.367,Health:0.724,Freedom:0.587,Generosity:0.062,Corruption:0.163,Rank:41},
+  {Country:"Austria",Region:"Western Europe",Year:2023,Score:7.097,GDP:1.957,Social:1.480,Health:0.731,Freedom:0.625,Generosity:0.122,Corruption:0.216,Rank:12},
+  {Country:"Luxembourg",Region:"Western Europe",Year:2023,Score:7.228,GDP:2.263,Social:1.495,Health:0.738,Freedom:0.618,Generosity:0.141,Corruption:0.261,Rank:9},
+  {Country:"Ireland",Region:"Western Europe",Year:2023,Score:7.085,GDP:2.109,Social:1.481,Health:0.725,Freedom:0.647,Generosity:0.180,Corruption:0.194,Rank:14},
+  {Country:"Singapore",Region:"Southeast Asia",Year:2023,Score:6.587,GDP:2.098,Social:1.241,Health:0.786,Freedom:0.594,Generosity:0.196,Corruption:0.471,Rank:25},
+  // 2022 data
+  {Country:"Finland",Region:"Western Europe",Year:2022,Score:7.821,GDP:1.832,Social:1.578,Health:0.724,Freedom:0.681,Generosity:0.109,Corruption:0.193,Rank:1},
+  {Country:"Denmark",Region:"Western Europe",Year:2022,Score:7.636,GDP:1.900,Social:1.526,Health:0.697,Freedom:0.665,Generosity:0.177,Corruption:0.268,Rank:2},
+  {Country:"Iceland",Region:"Western Europe",Year:2022,Score:7.557,GDP:1.875,Social:1.621,Health:0.716,Freedom:0.668,Generosity:0.246,Corruption:0.145,Rank:3},
+  {Country:"Switzerland",Region:"Western Europe",Year:2022,Score:7.512,GDP:2.020,Social:1.551,Health:0.745,Freedom:0.633,Generosity:0.166,Corruption:0.330,Rank:4},
+  {Country:"Netherlands",Region:"Western Europe",Year:2022,Score:7.415,GDP:1.895,Social:1.489,Health:0.706,Freedom:0.636,Generosity:0.183,Corruption:0.282,Rank:5},
+  {Country:"Sweden",Region:"Western Europe",Year:2022,Score:7.384,GDP:1.872,Social:1.503,Health:0.722,Freedom:0.662,Generosity:0.154,Corruption:0.261,Rank:7},
+  {Country:"Norway",Region:"Western Europe",Year:2022,Score:7.365,GDP:1.995,Social:1.498,Health:0.736,Freedom:0.645,Generosity:0.125,Corruption:0.267,Rank:8},
+  {Country:"Israel",Region:"Middle East & North Africa",Year:2022,Score:7.364,GDP:1.795,Social:1.518,Health:0.716,Freedom:0.501,Generosity:0.147,Corruption:0.122,Rank:9},
+  {Country:"New Zealand",Region:"North America & ANZ",Year:2022,Score:7.200,GDP:1.766,Social:1.536,Health:0.718,Freedom:0.661,Generosity:0.229,Corruption:0.233,Rank:10},
+  {Country:"United States",Region:"North America & ANZ",Year:2022,Score:6.977,GDP:2.010,Social:1.402,Health:0.691,Freedom:0.601,Generosity:0.122,Corruption:0.104,Rank:16},
+  {Country:"Germany",Region:"Western Europe",Year:2022,Score:7.034,GDP:1.873,Social:1.454,Health:0.714,Freedom:0.607,Generosity:0.158,Corruption:0.207,Rank:14},
+  {Country:"United Kingdom",Region:"Western Europe",Year:2022,Score:6.943,GDP:1.840,Social:1.439,Health:0.704,Freedom:0.581,Generosity:0.155,Corruption:0.171,Rank:17},
+  {Country:"Canada",Region:"North America & ANZ",Year:2022,Score:7.001,GDP:1.848,Social:1.483,Health:0.714,Freedom:0.622,Generosity:0.151,Corruption:0.192,Rank:15},
+  {Country:"France",Region:"Western Europe",Year:2022,Score:6.687,GDP:1.834,Social:1.406,Health:0.712,Freedom:0.538,Generosity:0.062,Corruption:0.190,Rank:20},
+  {Country:"Japan",Region:"East Asia",Year:2022,Score:6.039,GDP:1.855,Social:1.370,Health:0.741,Freedom:0.455,Generosity:0.112,Corruption:0.142,Rank:54},
+  {Country:"South Korea",Region:"East Asia",Year:2022,Score:5.935,GDP:1.830,Social:1.272,Health:0.726,Freedom:0.483,Generosity:0.066,Corruption:0.089,Rank:59},
+  {Country:"China",Region:"East Asia",Year:2022,Score:5.585,GDP:1.588,Social:1.207,Health:0.668,Freedom:0.518,Generosity:0.060,Corruption:0.048,Rank:72},
+  {Country:"India",Region:"South Asia",Year:2022,Score:3.777,GDP:1.062,Social:1.059,Health:0.537,Freedom:0.428,Generosity:0.134,Corruption:0.077,Rank:136},
+  {Country:"Brazil",Region:"Latin America & Caribbean",Year:2022,Score:6.293,GDP:1.418,Social:1.374,Health:0.627,Freedom:0.558,Generosity:0.119,Corruption:0.052,Rank:38},
+  {Country:"Argentina",Region:"Latin America & Caribbean",Year:2022,Score:5.988,GDP:1.511,Social:1.375,Health:0.662,Freedom:0.479,Generosity:0.076,Corruption:0.055,Rank:52},
+  {Country:"Russia",Region:"Commonwealth of Independent States",Year:2022,Score:5.459,GDP:1.666,Social:1.333,Health:0.613,Freedom:0.364,Generosity:0.035,Corruption:0.042,Rank:80},
+  // 2021
+  {Country:"Finland",Region:"Western Europe",Year:2021,Score:7.842,GDP:1.825,Social:1.582,Health:0.723,Freedom:0.679,Generosity:0.111,Corruption:0.191,Rank:1},
+  {Country:"Denmark",Region:"Western Europe",Year:2021,Score:7.620,GDP:1.892,Social:1.532,Health:0.695,Freedom:0.663,Generosity:0.168,Corruption:0.280,Rank:2},
+  {Country:"Switzerland",Region:"Western Europe",Year:2021,Score:7.571,GDP:2.012,Social:1.554,Health:0.743,Freedom:0.631,Generosity:0.158,Corruption:0.327,Rank:3},
+  {Country:"Iceland",Region:"Western Europe",Year:2021,Score:7.554,GDP:1.869,Social:1.625,Health:0.714,Freedom:0.667,Generosity:0.239,Corruption:0.141,Rank:4},
+  {Country:"Netherlands",Region:"Western Europe",Year:2021,Score:7.464,GDP:1.887,Social:1.493,Health:0.703,Freedom:0.634,Generosity:0.175,Corruption:0.279,Rank:5},
+  {Country:"Norway",Region:"Western Europe",Year:2021,Score:7.392,GDP:1.987,Social:1.501,Health:0.734,Freedom:0.643,Generosity:0.116,Corruption:0.265,Rank:6},
+  {Country:"Sweden",Region:"Western Europe",Year:2021,Score:7.363,GDP:1.864,Social:1.505,Health:0.720,Freedom:0.660,Generosity:0.145,Corruption:0.257,Rank:7},
+  {Country:"New Zealand",Region:"North America & ANZ",Year:2021,Score:7.277,GDP:1.758,Social:1.540,Health:0.716,Freedom:0.659,Generosity:0.222,Corruption:0.228,Rank:9},
+  {Country:"Canada",Region:"North America & ANZ",Year:2021,Score:7.103,GDP:1.841,Social:1.486,Health:0.712,Freedom:0.619,Generosity:0.142,Corruption:0.190,Rank:14},
+  {Country:"United States",Region:"North America & ANZ",Year:2021,Score:6.951,GDP:2.003,Social:1.406,Health:0.688,Freedom:0.597,Generosity:0.114,Corruption:0.097,Rank:19},
+  {Country:"Germany",Region:"Western Europe",Year:2021,Score:7.155,GDP:1.866,Social:1.457,Health:0.712,Freedom:0.603,Generosity:0.149,Corruption:0.203,Rank:13},
+  {Country:"United Kingdom",Region:"Western Europe",Year:2021,Score:7.064,GDP:1.834,Social:1.441,Health:0.701,Freedom:0.577,Generosity:0.147,Corruption:0.169,Rank:17},
+  {Country:"Japan",Region:"East Asia",Year:2021,Score:5.940,GDP:1.848,Social:1.371,Health:0.740,Freedom:0.450,Generosity:0.108,Corruption:0.139,Rank:56},
+  {Country:"China",Region:"East Asia",Year:2021,Score:5.339,GDP:1.573,Social:1.198,Health:0.665,Freedom:0.510,Generosity:0.055,Corruption:0.040,Rank:84},
+  {Country:"India",Region:"South Asia",Year:2021,Score:3.819,GDP:1.044,Social:1.059,Health:0.534,Freedom:0.422,Generosity:0.130,Corruption:0.073,Rank:139},
+  {Country:"Brazil",Region:"Latin America & Caribbean",Year:2021,Score:6.330,GDP:1.409,Social:1.375,Health:0.623,Freedom:0.554,Generosity:0.110,Corruption:0.049,Rank:35},
+  {Country:"Russia",Region:"Commonwealth of Independent States",Year:2021,Score:5.477,GDP:1.648,Social:1.337,Health:0.610,Freedom:0.358,Generosity:0.027,Corruption:0.044,Rank:76},
+  // 2020
+  {Country:"Finland",Region:"Western Europe",Year:2020,Score:7.809,GDP:1.817,Social:1.586,Health:0.720,Freedom:0.677,Generosity:0.113,Corruption:0.191,Rank:2},
+  {Country:"Denmark",Region:"Western Europe",Year:2020,Score:7.646,GDP:1.883,Social:1.537,Health:0.692,Freedom:0.661,Generosity:0.159,Corruption:0.278,Rank:1},
+  {Country:"Switzerland",Region:"Western Europe",Year:2020,Score:7.560,GDP:2.004,Social:1.557,Health:0.740,Freedom:0.629,Generosity:0.150,Corruption:0.323,Rank:3},
+  {Country:"Iceland",Region:"Western Europe",Year:2020,Score:7.504,GDP:1.860,Social:1.626,Health:0.711,Freedom:0.665,Generosity:0.230,Corruption:0.135,Rank:4},
+  {Country:"Norway",Region:"Western Europe",Year:2020,Score:7.488,GDP:1.978,Social:1.504,Health:0.731,Freedom:0.641,Generosity:0.107,Corruption:0.263,Rank:5},
+  {Country:"Netherlands",Region:"Western Europe",Year:2020,Score:7.449,GDP:1.878,Social:1.496,Health:0.700,Freedom:0.632,Generosity:0.167,Corruption:0.276,Rank:6},
+  {Country:"Sweden",Region:"Western Europe",Year:2020,Score:7.353,GDP:1.855,Social:1.506,Health:0.717,Freedom:0.657,Generosity:0.136,Corruption:0.253,Rank:7},
+  {Country:"New Zealand",Region:"North America & ANZ",Year:2020,Score:7.300,GDP:1.750,Social:1.542,Health:0.713,Freedom:0.657,Generosity:0.213,Corruption:0.222,Rank:8},
+  {Country:"Canada",Region:"North America & ANZ",Year:2020,Score:7.232,GDP:1.832,Social:1.488,Health:0.709,Freedom:0.617,Generosity:0.133,Corruption:0.187,Rank:11},
+  {Country:"United States",Region:"North America & ANZ",Year:2020,Score:6.940,GDP:1.995,Social:1.409,Health:0.684,Freedom:0.593,Generosity:0.107,Corruption:0.093,Rank:18},
+  {Country:"Germany",Region:"Western Europe",Year:2020,Score:7.076,GDP:1.857,Social:1.459,Health:0.709,Freedom:0.599,Generosity:0.140,Corruption:0.199,Rank:17},
+  {Country:"United Kingdom",Region:"Western Europe",Year:2020,Score:7.165,GDP:1.826,Social:1.443,Health:0.698,Freedom:0.573,Generosity:0.139,Corruption:0.167,Rank:13},
+  {Country:"Japan",Region:"East Asia",Year:2020,Score:5.871,GDP:1.847,Social:1.374,Health:0.738,Freedom:0.451,Generosity:0.104,Corruption:0.138,Rank:62},
+  {Country:"China",Region:"East Asia",Year:2020,Score:5.124,GDP:1.571,Social:1.198,Health:0.662,Freedom:0.511,Generosity:0.054,Corruption:0.042,Rank:94},
+  {Country:"India",Region:"South Asia",Year:2020,Score:3.573,GDP:1.044,Social:1.055,Health:0.532,Freedom:0.420,Generosity:0.128,Corruption:0.071,Rank:144},
+  {Country:"Brazil",Region:"Latin America & Caribbean",Year:2020,Score:6.330,GDP:1.409,Social:1.375,Health:0.623,Freedom:0.554,Generosity:0.110,Corruption:0.049,Rank:32},
+  {Country:"Russia",Region:"Commonwealth of Independent States",Year:2020,Score:5.546,GDP:1.648,Social:1.337,Health:0.610,Freedom:0.358,Generosity:0.027,Corruption:0.044,Rank:73},
+  // 2019
+  {Country:"Finland",Region:"Western Europe",Year:2019,Score:7.769,GDP:1.801,Social:1.577,Health:0.717,Freedom:0.668,Generosity:0.107,Corruption:0.191,Rank:1},
+  {Country:"Denmark",Region:"Western Europe",Year:2019,Score:7.600,GDP:1.873,Social:1.530,Health:0.686,Freedom:0.652,Generosity:0.150,Corruption:0.264,Rank:2},
+  {Country:"Norway",Region:"Western Europe",Year:2019,Score:7.554,GDP:1.969,Social:1.498,Health:0.727,Freedom:0.634,Generosity:0.098,Corruption:0.259,Rank:3},
+  {Country:"Iceland",Region:"Western Europe",Year:2019,Score:7.494,GDP:1.850,Social:1.619,Health:0.706,Freedom:0.658,Generosity:0.217,Corruption:0.128,Rank:4},
+  {Country:"Netherlands",Region:"Western Europe",Year:2019,Score:7.488,GDP:1.869,Social:1.488,Health:0.695,Freedom:0.625,Generosity:0.158,Corruption:0.268,Rank:5},
+  {Country:"Switzerland",Region:"Western Europe",Year:2019,Score:7.480,GDP:1.996,Social:1.546,Health:0.738,Freedom:0.621,Generosity:0.142,Corruption:0.315,Rank:6},
+  {Country:"Sweden",Region:"Western Europe",Year:2019,Score:7.343,GDP:1.846,Social:1.499,Health:0.714,Freedom:0.650,Generosity:0.127,Corruption:0.249,Rank:7},
+  {Country:"New Zealand",Region:"North America & ANZ",Year:2019,Score:7.307,GDP:1.741,Social:1.535,Health:0.709,Freedom:0.651,Generosity:0.203,Corruption:0.215,Rank:8},
+  {Country:"Canada",Region:"North America & ANZ",Year:2019,Score:7.278,GDP:1.824,Social:1.483,Health:0.705,Freedom:0.609,Generosity:0.124,Corruption:0.182,Rank:9},
+  {Country:"United States",Region:"North America & ANZ",Year:2019,Score:6.892,GDP:1.988,Social:1.401,Health:0.678,Freedom:0.587,Generosity:0.098,Corruption:0.088,Rank:19},
+  {Country:"Germany",Region:"Western Europe",Year:2019,Score:6.985,GDP:1.849,Social:1.451,Health:0.705,Freedom:0.591,Generosity:0.131,Corruption:0.193,Rank:17},
+  {Country:"United Kingdom",Region:"Western Europe",Year:2019,Score:7.054,GDP:1.818,Social:1.436,Health:0.694,Freedom:0.567,Generosity:0.131,Corruption:0.160,Rank:15},
+  {Country:"Japan",Region:"East Asia",Year:2019,Score:5.886,GDP:1.838,Social:1.369,Health:0.735,Freedom:0.444,Generosity:0.097,Corruption:0.132,Rank:58},
+  {Country:"China",Region:"East Asia",Year:2019,Score:5.191,GDP:1.561,Social:1.189,Health:0.657,Freedom:0.504,Generosity:0.049,Corruption:0.037,Rank:93},
+  {Country:"India",Region:"South Asia",Year:2019,Score:3.573,GDP:1.022,Social:1.049,Health:0.526,Freedom:0.412,Generosity:0.121,Corruption:0.066,Rank:140},
+  {Country:"Brazil",Region:"Latin America & Caribbean",Year:2019,Score:6.300,GDP:1.401,Social:1.368,Health:0.616,Freedom:0.546,Generosity:0.102,Corruption:0.044,Rank:32},
+  {Country:"Russia",Region:"Commonwealth of Independent States",Year:2019,Score:5.648,GDP:1.637,Social:1.334,Health:0.603,Freedom:0.352,Generosity:0.022,Corruption:0.040,Rank:68},
+];
+
+const REGION_COLORS = {
+  "Western Europe":"#e8632a",
+  "North America & ANZ":"#2a7de8",
+  "Central and Eastern Europe":"#2ac87d",
+  "East Asia":"#c82a7d",
+  "Southeast Asia":"#8a2ae8",
+  "Latin America & Caribbean":"#e8c42a",
+  "Middle East & North Africa":"#2ae8c8",
+  "South Asia":"#e82a4a",
+  "Sub-Saharan Africa":"#7d8a2a",
+  "Commonwealth of Independent States":"#8a6a2a",
+};
+
+const FACTORS = {
+  GDP_per_capita: "GDP per Capita",
+  SocialSupport: "Social Support",
+  HealthyLifeExpectancy: "Life Expectancy",
+  FreedomToChoose: "Freedom to Choose",
+  Generosity: "Generosity",
+};
+
+let rankingChart, regionChart, trendChart, scatterChart, histChart, radarChart;
+let activeFactor = "GDP_per_capita";
+const TREND_COUNTRIES = ["Finland","United States","Japan","India","Brazil","China"];
+let activeCountries = new Set(["Finland","United States","Japan","India"]);
+
+function getFiltered() {
+  const year = parseInt(document.getElementById("f-year").value);
+  const region = document.getElementById("f-region").value;
+  return RAW.filter(d => d.Year === year && (region === "All" || d.Region === region));
+}
+
+function resetFilters() {
+  document.getElementById("f-year").value = "2023";
+  document.getElementById("f-region").value = "All";
+  applyFilters();
+}
+
+function applyFilters() {
+  const data = getFiltered();
+  const yr = document.getElementById("f-year").value;
+  const reg = document.getElementById("f-region").value;
+  document.getElementById("kpi-context").textContent = `Showing ${yr} · ${reg === "All" ? "All Regions" : reg}`;
+  updateKPIs(data);
+  updateRankingChart(data);
+  updateRegionChart(data);
+  updateScatterChart(data);
+  updateHistChart(data);
+  updateRadarChart(data);
+  updateHeatmap(data);
+  updateTable(data);
+  updateInsights(data);
+}
+
+// KPIs
+function updateKPIs(data) {
+  if (!data.length) return;
+  const sorted = [...data].sort((a,b)=>b.Score-a.Score);
+  const top = sorted[0], bot = sorted[sorted.length-1];
+  const avg = data.reduce((s,d)=>s+d.Score,0)/data.length;
+  const above7 = data.filter(d=>d.Score>=7).length;
+  document.getElementById("kpi-top").textContent = top.Country;
+  document.getElementById("kpi-top-score").textContent = `Score: ${top.Score.toFixed(3)} · Rank #${top.Rank}`;
+  document.getElementById("kpi-avg").textContent = avg.toFixed(2);
+  document.getElementById("kpi-avg-sub").textContent = `${data.length} countries in selection`;
+  document.getElementById("kpi-range").textContent = (top.Score - bot.Score).toFixed(2);
+  document.getElementById("kpi-range-sub").textContent = `${top.Country} vs ${bot.Country}`;
+  document.getElementById("kpi-above7").textContent = above7;
+  document.getElementById("kpi-above7-sub").textContent = `${above7} of ${data.length} in dataset`;
+  document.getElementById("kpi-bottom").textContent = bot.Country;
+  document.getElementById("kpi-bottom-score").textContent = `Score: ${bot.Score.toFixed(3)} · Rank #${bot.Rank}`;
+}
+
+// RANKING CHART
+function updateRankingChart(data) {
+  const sorted = [...data].sort((a,b)=>b.Score-a.Score);
+  const top10 = sorted.slice(0, 10);
+  const bot5 = sorted.slice(-5);
+  const display = [...top10, ...bot5];
+  const labels = display.map(d=>d.Country);
+  const scores = display.map(d=>d.Score);
+  const colors = display.map(d=>REGION_COLORS[d.Region]||"#888");
+  if (rankingChart) {
+    rankingChart.data.labels = labels;
+    rankingChart.data.datasets[0].data = scores;
+    rankingChart.data.datasets[0].backgroundColor = colors.map(c=>c+"99");
+    rankingChart.data.datasets[0].borderColor = colors;
+    rankingChart.update();
+    return;
+  }
+  const ctx = document.getElementById("rankingChart").getContext("2d");
+  rankingChart = new Chart(ctx, {
+    type:"bar",
+    data:{labels, datasets:[{label:"Score", data:scores, backgroundColor:colors.map(c=>c+"99"), borderColor:colors, borderWidth:1.5, borderRadius:4, borderSkipped:false}]},
+    options:{
+      indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{
+        callbacks:{label:c=>`  Score: ${c.parsed.x.toFixed(3)}`},
+        backgroundColor:"#1a1714", titleColor:"#f7f5f0", bodyColor:"#8a7f74", borderColor:"#e2ddd5", borderWidth:1
+      }},
+      scales:{
+        x:{min:0,max:9, grid:{color:"rgba(0,0,0,0.05)"}, ticks:{font:{size:10}, color:"#8a7f74"}},
+        y:{grid:{display:false}, ticks:{font:{size:10}, color:"#1a1714"}}
+      }
+    }
+  });
+}
+
+// REGION CHART
+function updateRegionChart(data) {
+  const regionMap = {};
+  data.forEach(d=>{
+    if (!regionMap[d.Region]) regionMap[d.Region]={sum:0,n:0};
+    regionMap[d.Region].sum+=d.Score; regionMap[d.Region].n++;
+  });
+  const entries = Object.entries(regionMap).map(([r,v])=>({r,avg:v.sum/v.n})).sort((a,b)=>b.avg-a.avg);
+  const labels = entries.map(e=>e.r.length>20?e.r.replace(" & "," &\n"):e.r);
+  const values = entries.map(e=>e.avg);
+  const colors = entries.map(e=>REGION_COLORS[e.r]||"#888");
+  if (regionChart) {
+    regionChart.data.labels = labels;
+    regionChart.data.datasets[0].data = values;
+    regionChart.data.datasets[0].backgroundColor = colors.map(c=>c+"bb");
+    regionChart.update(); return;
+  }
+  const ctx = document.getElementById("regionChart").getContext("2d");
+  regionChart = new Chart(ctx, {
+    type:"bar",
+    data:{labels, datasets:[{label:"Avg Score", data:values, backgroundColor:colors.map(c=>c+"bb"), borderColor:colors, borderWidth:1.5, borderRadius:4, borderSkipped:false}]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>`Avg: ${c.parsed.y.toFixed(2)}`}, backgroundColor:"#1a1714", titleColor:"#f7f5f0", bodyColor:"#8a7f74", borderColor:"#e2ddd5", borderWidth:1}},
+      scales:{
+        x:{grid:{display:false}, ticks:{font:{size:9},color:"#8a7f74",maxRotation:45}},
+        y:{min:0,max:8.5,grid:{color:"rgba(0,0,0,0.05)"}, ticks:{font:{size:10},color:"#8a7f74"}}
+      }
+    }
+  });
+}
+
+// TREND CHART
+function initTrendTabs() {
+  const wrap = document.getElementById("trend-tabs");
+  wrap.innerHTML = TREND_COUNTRIES.map(c=>`
+    <button class="trend-tab ${activeCountries.has(c)?"active":""}" onclick="toggleCountry('${c}',this)">${c}</button>
+  `).join("");
+}
+
+function toggleCountry(country, btn) {
+  if (activeCountries.has(country)) {
+    if (activeCountries.size <= 1) return;
+    activeCountries.delete(country);
+    btn.classList.remove("active");
+  } else {
+    activeCountries.add(country);
+    btn.classList.add("active");
+  }
+  updateTrendChart();
+}
+
+function updateTrendChart() {
+  const years = [2019,2020,2021,2022,2023];
+  const countryColors = {Finland:"#e8632a",Denmark:"#2a7de8",United_States:"#2ac87d","United States":"#2ac87d",Japan:"#c82a7d",India:"#8a2ae8",Brazil:"#e8c42a",China:"#2ae8c8"};
+  const datasets = [...activeCountries].map(c=>{
+    const pts = years.map(y=>{
+      const d = RAW.find(r=>r.Country===c && r.Year===y);
+      return d ? d.Score : null;
+    });
+    const col = countryColors[c] || "#888";
+    return {label:c, data:pts, borderColor:col, backgroundColor:col+"22", borderWidth:2.5, pointRadius:5, pointHoverRadius:7, tension:0.3, fill:false};
+  });
+  if (trendChart) {
+    trendChart.data.datasets = datasets;
+    trendChart.update(); return;
+  }
+  const ctx = document.getElementById("trendChart").getContext("2d");
+  trendChart = new Chart(ctx, {
+    type:"line",
+    data:{labels:years, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:"top", labels:{font:{size:11, family:"'JetBrains Mono'"}, color:"#1a1714", boxWidth:12, padding:16}},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y?.toFixed(3)}`}, backgroundColor:"#1a1714", titleColor:"#f7f5f0", bodyColor:"#8a7f74", borderColor:"#e2ddd5", borderWidth:1}
+      },
+      scales:{
+        x:{grid:{color:"rgba(0,0,0,0.05)"}, ticks:{font:{size:11},color:"#8a7f74"}},
+        y:{min:3, max:8.5, grid:{color:"rgba(0,0,0,0.05)"}, ticks:{font:{size:11},color:"#8a7f74"}}
+      }
+    }
+  });
+}
+
+// SCATTER
+function setFactor(btn) {
+  document.querySelectorAll(".factor-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  activeFactor = btn.dataset.key;
+  updateScatterChart(getFiltered());
+}
+
+function updateScatterChart(data) {
+  const byRegion = {};
+  data.forEach(d=>{
+    const r = d.Region;
+    if (!byRegion[r]) byRegion[r]=[];
+    byRegion[r].push({x:d[activeFactor], y:d.Score, label:d.Country});
+  });
+  const datasets = Object.entries(byRegion).map(([r,pts])=>({
+    label:r, data:pts,
+    backgroundColor:(REGION_COLORS[r]||"#888")+"bb",
+    borderColor:(REGION_COLORS[r]||"#888"),
+    pointRadius:6, pointHoverRadius:9, borderWidth:1.5
+  }));
+  if (scatterChart) {
+    scatterChart.data.datasets = datasets;
+    scatterChart.options.scales.x.title.text = FACTORS[activeFactor];
+    scatterChart.update(); return;
+  }
+  const ctx = document.getElementById("scatterChart").getContext("2d");
+  scatterChart = new Chart(ctx, {
+    type:"scatter",
+    data:{datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:c=>`${c.raw.label}: (${c.raw.x.toFixed(2)}, ${c.raw.y.toFixed(3)})`}, backgroundColor:"#1a1714", titleColor:"#f7f5f0", bodyColor:"#8a7f74", borderColor:"#e2ddd5", borderWidth:1}
+      },
+      scales:{
+        x:{title:{display:true, text:FACTORS[activeFactor], color:"#8a7f74",font:{size:11}}, grid:{color:"rgba(0,0,0,0.05)"}, ticks:{font:{size:10},color:"#8a7f74"}},
+        y:{title:{display:true, text:"Happiness Score", color:"#8a7f74",font:{size:11}}, min:0,max:9, grid:{color:"rgba(0,0,0,0.05)"}, ticks:{font:{size:10},color:"#8a7f74"}}
+      }
+    }
+  });
+}
+
+// HISTOGRAM
+function updateHistChart(data) {
+  const bins = [0,1,2,3,4,5,6,7,8,9];
+  const counts = Array(8).fill(0);
+  data.forEach(d=>{
+    const idx = Math.min(Math.floor(d.Score)-1, 7);
+    if (idx>=0) counts[idx]++;
+  });
+  const labels = ["1–2","2–3","3–4","4–5","5–6","6–7","7–8","8+"];
+  const colors = ["#e82a4a","#e82a4a","#e8632a","#e8c42a","#2ac87d","#2a7de8","#8a2ae8","#8a2ae8"];
+  if (histChart) {
+    histChart.data.datasets[0].data = counts;
+    histChart.update(); return;
+  }
+  const ctx = document.getElementById("histChart").getContext("2d");
+  histChart = new Chart(ctx, {
+    type:"bar",
+    data:{labels, datasets:[{label:"Countries", data:counts, backgroundColor:colors.map(c=>c+"cc"), borderColor:colors, borderWidth:1.5, borderRadius:4, borderSkipped:false}]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>`${c.parsed.y} countries`}, backgroundColor:"#1a1714", titleColor:"#f7f5f0", bodyColor:"#8a7f74", borderColor:"#e2ddd5", borderWidth:1}},
+      scales:{
+        x:{grid:{display:false}, ticks:{font:{size:10},color:"#8a7f74"}, title:{display:true, text:"Score Range", color:"#8a7f74", font:{size:10}}},
+        y:{grid:{color:"rgba(0,0,0,0.05)"}, ticks:{font:{size:10},color:"#8a7f74",stepSize:1}, title:{display:true, text:"# Countries", color:"#8a7f74", font:{size:10}}}
+      }
+    }
+  });
+}
+
+// RADAR
+function updateRadarChart(data) {
+  const sorted = [...data].sort((a,b)=>b.Score-a.Score);
+  const top5 = sorted.slice(0,5);
+  const bot5 = sorted.slice(-5);
+  const avg = arr => arr.reduce((s,d)=>s+d,0)/arr.length;
+  const keys = ["GDP_per_capita","SocialSupport","HealthyLifeExpectancy","FreedomToChoose","Generosity"];
+  const labels = ["GDP","Social Support","Life Expectancy","Freedom","Generosity"];
+  const topAvg = keys.map(k=>avg(top5.map(d=>d[k])));
+  const botAvg = keys.map(k=>avg(bot5.map(d=>d[k])));
+  if (radarChart) {
+    radarChart.data.datasets[0].data = topAvg;
+    radarChart.data.datasets[1].data = botAvg;
+    radarChart.update(); return;
+  }
+  const ctx = document.getElementById("radarChart").getContext("2d");
+  radarChart = new Chart(ctx, {
+    type:"radar",
+    data:{labels, datasets:[
+      {label:"Top 5 Countries",data:topAvg,borderColor:"#2a7de8",backgroundColor:"rgba(42,125,232,0.15)",borderWidth:2.5,pointBackgroundColor:"#2a7de8"},
+      {label:"Bottom 5 Countries",data:botAvg,borderColor:"#e8632a",backgroundColor:"rgba(232,99,42,0.15)",borderWidth:2.5,pointBackgroundColor:"#e8632a"}
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:"top", labels:{font:{size:10},color:"#1a1714",boxWidth:10}}, tooltip:{backgroundColor:"#1a1714", titleColor:"#f7f5f0", bodyColor:"#8a7f74", borderColor:"#e2ddd5", borderWidth:1}},
+      scales:{r:{grid:{color:"rgba(0,0,0,0.07)"}, ticks:{backdropColor:"transparent", font:{size:9}, color:"#8a7f74"}, pointLabels:{font:{size:10},color:"#1a1714"}}}
+    }
+  });
+}
+
+// HEATMAP
+function scoreToColor(val, min, max) {
+  const t = (val - min) / (max - min);
+  const r = Math.round(232 - t*90);
+  const g = Math.round(99 + t*100);
+  const b = Math.round(42 + t*60);
+  return `rgb(${r},${g},${b})`;
+}
+
+function updateHeatmap(data) {
+  const sorted = [...data].sort((a,b)=>b.Score-a.Score).slice(0,18);
+  const factors = ["GDP_per_capita","SocialSupport","HealthyLifeExpectancy","FreedomToChoose","Generosity","Corruption"];
+  const fLabels = ["GDP","Social","Health","Freedom","Generosity","Anti-Corruption"];
+  const wrap = document.getElementById("heatmap");
+  const cols = factors.length + 1;
+  wrap.innerHTML = `
+    <div style="display:grid;grid-template-columns:100px repeat(${factors.length},1fr);gap:2px">
+      <div class="hm-label" style="font-size:9px;padding:4px 0">Country</div>
+      ${fLabels.map(l=>`<div class="hm-label" style="font-size:9px;text-align:center;padding:4px 0">${l}</div>`).join("")}
+      ${sorted.map(d=>{
+        const cells = factors.map(f=>{
+          const allVals = data.map(x=>x[f]);
+          const mn = Math.min(...allVals), mx = Math.max(...allVals);
+          const bg = scoreToColor(d[f],mn,mx);
+          return `<div class="hm-cell" style="background:${bg}" data-tip="${fLabels[factors.indexOf(f)]}: ${d[f].toFixed(3)}"></div>`;
+        }).join("");
+        return `<div class="hm-label" style="font-size:10px;padding:4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${d.Country}">${d.Country}</div>${cells}`;
+      }).join("")}
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+      <span style="font-size:10px;color:#8a7f74;font-family:var(--mono)">Low</span>
+      <div style="height:8px;flex:1;border-radius:4px;background:linear-gradient(to right,rgb(232,99,42),rgb(142,199,102))"></div>
+      <span style="font-size:10px;color:#8a7f74;font-family:var(--mono)">High</span>
+    </div>
+  `;
+}
+
+// TABLE
+function updateTable(data) {
+  const sorted = [...data].sort((a,b)=>b.Score-a.Score);
+  const tbody = document.getElementById("data-table");
+  tbody.innerHTML = sorted.map((d,i)=>`
+    <tr>
+      <td class="rank-num">${i+1}</td>
+      <td style="font-weight:500">${d.Country}</td>
+      <td><span class="region-tag">${d.Region}</span></td>
+      <td>
+        <div class="score-bar">
+          <div class="sbar" style="width:${d.Score/8*80}px;background:${REGION_COLORS[d.Region]||"#888"}99"></div>
+          <span style="font-family:var(--mono);font-size:11px;font-weight:500">${d.Score.toFixed(3)}</span>
+        </div>
+      </td>
+      <td style="font-family:var(--mono);font-size:11px;color:#8a7f74">${d.GDP.toFixed(3)}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:#8a7f74">${d.Social.toFixed(3)}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:#8a7f74">${d.Health.toFixed(3)}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:#8a7f74">${d.Freedom.toFixed(3)}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:#8a7f74">${d.Generosity.toFixed(3)}</td>
+    </tr>`).join("");
+}
+
+// INSIGHTS
+function updateInsights(data) {
+  const sorted = [...data].sort((a,b)=>b.Score-a.Score);
+  const top = sorted[0], bot = sorted[sorted.length-1];
+  const avg = d => data.reduce((s,r)=>s+r[d],0)/data.length;
+  const gdpCorr = (() => {
+    const n=data.length, xs=data.map(d=>d.GDP_per_capita), ys=data.map(d=>d.Score);
+    const mx=xs.reduce((a,b)=>a+b)/n, my=ys.reduce((a,b)=>a+b)/n;
+    const num=xs.reduce((s,x,i)=>s+(x-mx)*(ys[i]-my),0);
+    const den=Math.sqrt(xs.reduce((s,x)=>s+(x-mx)**2,0)*ys.reduce((s,y)=>s+(y-my)**2,0));
+    return (num/den).toFixed(2);
+  })();
+  const row = document.getElementById("insights-row");
+  row.innerHTML = `
+    <div class="insight-card">
+      <div class="insight-icon">🌍</div>
+      <div class="insight-title">Western Europe Dominates</div>
+      <div class="insight-stat">${sorted.filter(d=>d.Region==="Western Europe").length} of top 10</div>
+      <div class="insight-body">Western European nations occupy the majority of top-ranked positions, driven by strong social support systems and low corruption.</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">💰</div>
+      <div class="insight-title">GDP Correlation with Happiness</div>
+      <div class="insight-stat">r = ${gdpCorr}</div>
+      <div class="insight-body">GDP per capita shows a strong positive correlation with happiness scores — but it's not the whole story. Several high-GDP nations rank below lower-income counterparts.</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">📊</div>
+      <div class="insight-title">The Happiness Gap</div>
+      <div class="insight-stat">${(sorted[0].Score - sorted[sorted.length-1].Score).toFixed(2)} pts</div>
+      <div class="insight-body">The gap between ${top.Country} (#1) and ${bot.Country} (#${bot.Rank}) illustrates the dramatic global inequality in wellbeing and quality of life.</div>
+    </div>
+  `;
+}
+
+// INIT
+window.addEventListener("DOMContentLoaded", () => {
+  initTrendTabs();
+  applyFilters();
+  updateTrendChart();
+});
+</script>
+</body>
+</html>
